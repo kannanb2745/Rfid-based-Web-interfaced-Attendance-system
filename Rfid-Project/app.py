@@ -12,27 +12,6 @@ app.secret_key = str(os.getenv("FLASK_SECRETE_KEY"))
 def sign_in():
     return render_template("index.html")
 
-# @app.route("/auth", methods=["POST"])
-# def auth():
-#     rollNo = request.form.get('rollNo')
-#     DOB = request.form.get('DOB')
-#     validation = collection.find_one({"rollNo": int(51466), "DOB": str("26-03-2019")})
-#     # validation = collection.find_one({'rollNo': str(username), 'DOB': str(password)})
-#     if validation:
-#         return render_template_string("""
-#             <!DOCTYPE html>
-#             <html>
-#             <body>
-#                 YES
-#             </body>
-#             </html>
-#                 """)
-#     else:
-#         return redirect(url_for("sign_in"))
-    
-# @app.route("")
-
-
 @app.route("/auth", methods=["POST"])
 def auth():
     roll_no = request.form.get('rollNo', '').strip()  # Remove extra spaces
