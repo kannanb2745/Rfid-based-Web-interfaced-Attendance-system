@@ -58,14 +58,7 @@ def auth():
         if roll_no == "admin" and dob == "Admin@123":
             return redirect(url_for("admin_dashboard"))
         else:
-            return render_template_string("""
-                <!DOCTYPE html>
-                <html>
-                <body>
-                    <h1>YES</h1>
-                </body>
-                </html>
-            """)
+            return redirect(url_for("student_dashboard"))    
     else:
         return redirect(url_for("sign_in"))
 
@@ -73,9 +66,9 @@ def auth():
 
 
 #TODO:Make the nav bard fields with proper data
-@app.route('/admin_dashboard')
+@app.route('/admin-dashboard')
 def admin_dashboard():
-    return render_template("admin_dashboard.html", _id=str(123465), _dept=str("Computer Scince"))
+    return render_template("admin_dashboard.html")
 
 
 
@@ -109,7 +102,7 @@ def register_user():
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)})
     #NOTE: Here the web render register page if no values are there like get method 
-    return render_template('register_user.html',admin_dashboard='/admin_dashboard', _id=str(123465), _dept=str("Computer Scince"))
+    return render_template('register_user.html',admin_dashboard='/admin-dashboard')
 
 def rfid_entry():
     # sleep(3)
@@ -159,6 +152,55 @@ def generate_attendance():
 
     print("Sending Response:", attendance_data)  # Debugging output
     return jsonify(attendance_data)
+
+@app.route("/student-dashboard")
+def student_dashboard():
+    return render_template("student_dashboard.html")
+
+@app.route("/api/student-generate-attendance", methods=["POST"])
+def student_generate_attendance():
+    data = request.json  # Receive JSON input
+    print("Received JSON:", data)  # Debugging output
+    
+    if not data:
+        return jsonify({"error": "No data received"}), 400
+    
+    month = data.get("month")
+    year = data.get("year")
+    print(month, year)
+    
+    if not month or not year:
+        return jsonify({"error": "Invalid date input"}), 400
+    
+    # Simulating empty attendance for certain cases
+    if int(month) > 12 or int(year) < 2000:
+        return jsonify([])  # Return an empty list if invalid data is passed
+    
+    # Generate random attendance data
+    # TODO: Write a MongoDB fetch query for attendance
+    attendance_data = [
+        {
+            "rollNo": "12063",
+            "name": "John Doe",
+            "date": f"{1}/{month}/{year}",
+            "entryTime": "09:00 AM",
+            "exitTime": "05:00 PM"
+        },
+        {
+            "rollNo": "12064",
+            "name": "Jane Smith",
+            "date": f"{1}/{month}/{year}",
+            "entryTime": "09:15 AM",
+            "exitTime": "05:30 PM"
+        }
+    ]
+    
+    print("Sending Response:", attendance_data)  # Debugging output
+    return jsonify(attendance_data)
+
+
+
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
