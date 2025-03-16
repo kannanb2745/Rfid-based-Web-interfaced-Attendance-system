@@ -1,9 +1,36 @@
 import os
 from flask import Flask , render_template, request, render_template_string, redirect, url_for, jsonify
 from pymongo import MongoClient
+from datetime import datetime
 
-db = MongoClient(os.getenv("MONGO_URL"))["Sign-in"]
+# single MongoClient instance
+client = MongoClient(os.getenv("MONGO_URL"))
+
+# Main Database (Sign-in)
+db = client["Sign-in"]
 collection = db["Students"]
+
+Attandence = client["Students"]["Attandence"]
+# MetaData Databases
+meta_db = client["MetaData"]
+MetaDataStudents = meta_db["Students"]
+MetaDataEntries = meta_db["Entries"]
+
+admin_db = client["AdminDataBase"]
+AdminStudentList = admin_db["StudentsList"] # -> Students list of there data 
+AdminAttendance = admin_db["Attendance"]  # Entries of there grouped by date
+
+#TODO: create an dynamic folder creation by date by refering the below
+    # Generate collection name dynamically (Example: Attendance_YYYYMMDD or Attendance_StudentID)
+    # date_str = datetime.now().strftime("%Y%m%d")  # Format: YYYYMMDD
+    # collection_name = f"Attendance_{date_str}"  # Stores attendance per day
+# 
+    # Access or create the collection dynamically
+    # attendance_collection = admin_db[collection_name]
+
+
+
+
 
 app = Flask(__name__, static_folder="styles")
 app.secret_key = str(os.getenv("FLASK_SECRETE_KEY"))
@@ -20,7 +47,7 @@ def auth():
     # Convert roll number to integer (if stored as int in DB)
     try:
         if roll_no != "admin":
-            roll_no = int(roll_no)
+            roll_no = str(roll_no)
     except ValueError:
         return redirect(url_for("sign_in"))  # Invalid roll number input
 
@@ -61,11 +88,25 @@ def register_user():
         #NOTE: the register js will render the page again 
         try:
             data = request.get_json()
-            #TODO:Here need to push these values into Mongodb under -> {Metadata, Students_list, rfid & DOB -> Sign-in,  }
-            # Here you would typically save to a database using db.session.add and db.session.commit
+
+            #TODO: Call the rfid functoin to get rfid tag
             print(data)
             print(rfid_entry())
-            print(data.get("name"), data.get("dob"), data.get("gender"), data.get("email"), data.get("rollNumber"), data.get("department"), data.get("batchYear"))
+            student_details = {
+                "name" : data.get("name"),
+                "DOB" : data.get("dob"),
+                "gender" : data.get("gender"),
+                "email" : data.get("email"),
+                "rollNumber" : int(data.get("rollNumber")),
+                "department" : data.get("department"),
+                "batchYear" : data.get("batchYear"),
+                "rfidTag" : 12345,
+            }
+            MetaDataStudents.insert_one(student_details)
+            collection.insert_one({"rollNo": data.get("rollNumber"), "DOB": data.get("dob")})
+            AdminStudentList.insert_one(student_details)
+            MetaDataEntries.insert_one({"rfidTag" : 12345, "entryStatus" : False})
+            # print(data.get("name"), data.get("dob"), data.get("gender"), data.get("email"), data.get("rollNumber"), data.get("department"), data.get("batchYear"))
             return jsonify({'success': True})
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)})
