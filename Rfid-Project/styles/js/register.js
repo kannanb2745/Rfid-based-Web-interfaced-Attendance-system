@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert("place the card in the Rfid machine");
                 alert('User registered successfully!');
                 //TODO:Change this url into server url admin page dashbaord
-                window.location.href = 'http://127.0.0.1:5000/admin_dashboard';
+                window.location.href = 'http://127.0.0.1:5000/admin-dashboard';
             } else {
                 alert('Error registering user: ' + data.error);
             }
