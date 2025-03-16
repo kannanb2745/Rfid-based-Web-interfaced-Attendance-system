@@ -79,8 +79,6 @@ def admin_dashboard():
 
 
 
-#TODO:Store the data in the mongo db and in sign-in page 
-#NOTE:CHANGE THE DATE IN this format in sign-in page placeholder -> year-month-date
 @app.route('/register-user', methods=['GET', 'POST'])
 def register_user():
     if request.method == 'POST':
