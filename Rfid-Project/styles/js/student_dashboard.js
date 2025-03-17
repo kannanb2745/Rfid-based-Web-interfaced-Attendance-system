@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const tableContainer = document.getElementById('tableContainer');
     const attendanceTableBody = document.getElementById('attendanceTableBody');
     const logoutBtn = document.getElementById('logoutBtn');
+    // const rfidTag = document.getElementById('')
+    let rfidTag = document.querySelector(".nav-link").innerText.split(": ")[1];
 
     // Populate years (current year and 2 years back)
     function populateYears() {
@@ -25,7 +27,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const response = await fetch("/api/student-generate-attendance", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ month, year })
+                body: JSON.stringify({ month, year, rfidTag})
             });
             if (!response.ok) {
                 console.error("Server returned an error:", response.status);
