@@ -61,6 +61,7 @@ def auth():
         if roll_no == "admin" and dob == "Admin@123":
             return redirect(url_for("admin_dashboard"))
         else:
+    #TODO: Here get the data from the MetaData Database and send it to render it dynamically
             return redirect(url_for("student_dashboard"))    
     else:
         return redirect(url_for("sign_in"))
@@ -119,6 +120,7 @@ def generate_attendance():
     return jsonify(attendance_data)
 
 @app.route("/student-dashboard")
+#TODO:Change the values dynamically
 def student_dashboard():
     return render_template("student_dashboard.html")
 
@@ -208,8 +210,10 @@ def receive_rfid():
     day = current_time.day
     month = current_time.month
     year = current_time.year
+    time_str = current_time.strftime("%I:%M:%S %p")
+    
     check = MetaDataEntries.find_one({"rfidTag": rfid_id}) 
-    date_str = datetime.now().strftime("%Y%m%d")
+    date_str = datetime.now().strftime("%Y_%m_%d")
     student_entry = AdminAttendance[date_str]
     
     if check and check.get("entryStatus"):  # Check if entry exists and entryStatus is True
@@ -218,7 +222,8 @@ def receive_rfid():
             "day": day,
             "month": month, 
             "year": year,
-            "entry" : False
+            "time": time_str,  
+            "entry": False
         }
         student_entry.insert_one(details)
         Attandence[rfid_id].insert_one(details)
@@ -234,14 +239,15 @@ def receive_rfid():
         details = {
             "rfidTag": rfid_id,
             "day": day,
-            "month": month,
+            "month": month, 
             "year": year,
-            "entry" : True
+            "time": time_str,  
+            "entry": True
         }
         student_entry.insert_one(details)
         Attandence[rfid_id].insert_one(details)
         MetaDataEntries.update_one(
-        {"rfidTag": rfid_id, "entryStatus": True},  # Find the document where entryStatus is True
+        {"rfidTag": rfid_id, "entryStatus": False},  # Find the document where entryStatus is True
         {"$set": {"entryStatus": True}})  # Update entryStatus to False
 
 
