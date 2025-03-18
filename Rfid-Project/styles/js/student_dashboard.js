@@ -39,7 +39,6 @@ document.addEventListener('DOMContentLoaded', function () {
             return null;
         }
     }
-
     // Generate attendance table
     async function generateAttendanceTable() {
         const month = monthSelect.value;
@@ -80,7 +79,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function () {
-            alert('Logout functionality to be implemented');
+            // alert('Logout functionality to be implemented');
+            //TODO: Here make the url to point to the sign-in page path
+            window.location.href = 'http://127.0.0.1:5000/';
+
         });
     }
 

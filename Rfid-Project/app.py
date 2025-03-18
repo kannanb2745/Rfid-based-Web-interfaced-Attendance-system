@@ -22,12 +22,10 @@ MetaDataEntries = meta_db["Entries"]
 
 admin_db = client["AdminDataBase"]
 AdminStudentList = admin_db["StudentsList"] # -> Students list of there data 
-AdminAttendance = admin_db["Attendance"]  # Entries of there grouped by date
+# AdminAttendance = admin_db["Attendance"]  # Entries of there grouped by date
 
 #TODO:Need to write the common Logout function for admin and student
-#TODO: Just need to Write Query for getting the generating Attendance
 #TODO: need to write query for admin and some other patch work like fetching details in mongodb
-
 
 app = Flask(__name__, static_folder="styles")
 app.secret_key = str(os.getenv("FLASK_SECRETE_KEY"))
@@ -64,33 +62,33 @@ def sign_in():
 def auth():
     rollNumber = request.form.get('rollNo', '').strip()  # Remove extra spaces
     dob = request.form.get('DOB', '').strip()  # Remove spaces
-    student_data = dict(MetaDataStudents.find_one({'rollNumber': str(rollNumber)}))
     try:
-        if rollNumber != "admin":
-            rollNumber = str(rollNumber)
+        if rollNumber == "admin":
+            validation = collection.find_one({"rollNo": rollNumber, "DOB": dob})
+            if validation:
+                return redirect(url_for("admin_dashboard"))
+            else:
+                return redirect(url_for("sign_in"))
+        else:
+            validation = collection.find_one({"rollNo": rollNumber, "DOB": dob})
+            if validation:
+                student_data = dict(MetaDataStudents.find_one({'rollNumber': str(rollNumber)}))
+                return redirect(url_for("student_dashboard", _rfidTag=student_data.get("rfidTag"), _name=student_data.get("name"), _rollNo=rollNumber, _department=student_data.get("department")))  
+            else:
+                return redirect(url_for("sign_up"))
     except ValueError:
         return redirect(url_for("sign_in"))  # Invalid roll number input
 
-    # Check if the user exists
-    validation = collection.find_one({"rollNo": rollNumber, "DOB": dob})
-
-    if validation:
-        if rollNumber == "admin" and dob == "Admin@123":
-            return redirect(url_for("admin_dashboard"))
-        else:
-            return redirect(url_for("student_dashboard", _rfidTag=student_data.get("rfidTag"), _name=student_data.get("name"), _rollNo=rollNumber, _department=student_data.get("department")))  
-    else:
-        return redirect(url_for("sign_in"))
-
-
-
+@app.route("/logout", methods=["POST"])
+def logout():
+    print(request.json)
+    return redirect(url_for("sign_in"))
 @app.route('/admin-dashboard')
 def admin_dashboard():
     return render_template("admin_dashboard.html")
 
 
 
-#TODO: Wrrite an mongodb fecth data query for attadence 
 #TODO: May be change this url to admin-generate-attendance
 @app.route("/api/generate-attendance", methods=["POST"])
 def generate_attendance():
@@ -103,6 +101,8 @@ def generate_attendance():
     day = data.get("day")
     month = data.get("month")
     year = data.get("year")
+    month = str(month).zfill(2)
+    day = str(day).zfill(2)
     print(day, month, year)
 
     if not day or not month or not year:
@@ -112,26 +112,23 @@ def generate_attendance():
     if int(day) > 31 or int(month) > 12 or int(year) < 2000:
         return jsonify([])  # Return an empty list if invalid data is passed
 
-    # Generate random attendance data
-    #TODO:While Storing the in/out Attendance store it on day,month,year separate field
-    #TODO: Replicate the things done in Student
-    attendance_data = [
-        {
-            "rollNo": "12063",
-            "name": "John Doe",
-            "date": f"{day}/{month}/{year}",
-            "entryTime": "09:00 AM",
-            "exitTime": "05:00 PM"
-        },
-        {
-            "rollNo": "12064",
-            "name": "Jane Smith",
-            "date": f"{day}/{month}/{year}",
-            "entryTime": "09:15 AM",
-            "exitTime": "05:30 PM"
-        }
-    ]
-
+    
+    # students_collection = StudentAttendance[f"Attendance.{rfidTag}"]
+    AdminAttendance = admin_db[f"Attendance.{year}_{month}_{day}"]
+    print(f"Attendance.{year}_{month}_{day}")    # collected_data = list(students_collection.find({'month': int(month), 'year': int(year)}))
+    collected_data = AdminAttendance.find({})
+    attendance_data = []
+    for i in collected_data:
+        student_data = dict(MetaDataStudents.find_one({'rfidTag': i["rfidTag"]}))
+        name = student_data.get("name")
+        rollNumber = student_data.get('rollNumber')
+        attendance_data.append({
+            "rollNo": rollNumber,
+            "name": name,
+            "date": f"{i['day']}-{i['month']}-{i['year']}",
+            "entryTime": i['inTime'],
+            "exitTime": i['outTime']
+        })
     print("Sending Response:", attendance_data)  # Debugging output
     return jsonify(attendance_data)
 
@@ -162,7 +159,11 @@ def student_generate_attendance():
         return jsonify({"error": "Invalid date input"}), 400
     #TODO: where you need to check while pushing the entry if the months and year is already present or not 
     #TODO: need to create an db under Students and using rfid where for each students it contains the entry months and dates
-    if (str(month) != str("3") or str(month) != str("4 ")) and str(year) != "2025" :
+    student_data = client["Students"][f"Attendance.{str(rfidTag)}.MetaData"]
+    check = student_data.find_one({'month':str(month), 'year':str(year)})
+    print(check)
+    if check == None:
+    # if (str(month) != str("3") or str(month) != str("4 ")) and str(year) != "2025" :
         return jsonify({"error": "No Attendance are Available"}), 400
     
     if int(month) > 12 or int(year) < 2000:
@@ -174,24 +175,15 @@ def student_generate_attendance():
     name = student_data.get("name")
     rollNumber = student_data.get('rollNumber')
     
-    sorted_data = sorted(collected_data, key=lambda x: (x['year'], x['month'], x['day'], datetime.strptime(x['time'], '%H:%M:%S')))
-    dic = []
-    i = 0
-    while i < len(sorted_data) - 1:
-        entry = sorted_data[i]
-        exit_entry = sorted_data[i + 1]
-        if entry['entry'] and not exit_entry['entry']:
-            dic.append({
-                "rollNo": rollNumber,
-                "name": name,
-                "date": f"{entry['day']}-{entry['month']}-{entry['year']}",
-                "entryTime": entry['time'],
-                "exitTime": exit_entry['time']
-            })
-            i += 2  # Move to the next pair
-        else:
-            i += 1  # Skip the unmatched entry
-    attendance_data = dic
+    attendance_data = []
+    for i in collected_data:
+        attendance_data.append({
+            "rollNo": rollNumber,
+            "name": name,
+            "date": f"{i['day']}-{i['month']}-{i['year']}",
+            "entryTime": i['inTime'],
+            "exitTime": str(i['outTime'])
+        })
     
     print("Sending Response:", attendance_data)  # Debugging output
     return jsonify(attendance_data)
@@ -244,22 +236,33 @@ def receive_rfid():
     
     check = MetaDataEntries.find_one({"rfidTag": rfid_id}) 
     date_str = datetime.now().strftime("%Y_%m_%d")
+    AdminAttendance = admin_db["Attendance"]
     student_entry = AdminAttendance[date_str]
     
     #TODO: need to create an db under Students and using rfid where for each students it contains the entry months and dates
     #TODO: where you need to check while pushing the entry if the months and year is already present or not 
 
     if check and check.get("entryStatus"):  # Check if entry exists and entryStatus is True
-        details = {
-            "rfidTag": rfid_id,
-            "day": day,
-            "month": month, 
-            "year": year,
-            "time": time_str,  
-            "entry": False
-        }
-        student_entry.insert_one(details)
-        Attendance[rfid_id].insert_one(details)
+        # details = {
+        #     "rfidTag": rfid_id,
+        #     "day": day,
+        #     "month": month, 
+        #     "year": year,
+        #     "inTime": time_str,
+        #     "entry": False
+        # }
+        # student_entry.insert_one(details)
+        
+        student_entry.update_one(
+            {"rfidTag": rfid_id, "outTime": "Present"},
+            {"$set": {"outTime": time_str}}
+                                       )
+        # Attendance[rfid_id].insert_one(details)
+        # check Attendance
+        Attendance[rfid_id].update_one(
+            {"rfidTag": rfid_id, "outTime": "Present"},
+            {"$set": {"outTime": time_str}}
+                                       )
         MetaDataEntries.update_one(
         {"rfidTag": rfid_id, "entryStatus": True},  # Find the document where entryStatus is True
         {"$set": {"entryStatus": False}}  # Update entryStatus to False
@@ -269,12 +272,20 @@ def receive_rfid():
         # {"rfidTag": 0xb331529b, "entryStatus": True}
         # 0x5297ca1b
     else:
+        student_data = client["Students"][f"Attendance.{rfid_id}"]
+        check = student_data["MetaData"].find_one({'month':str(month), 'year':str(year)})
+        if check != True:
+            student_data["MetaData"].insert_one({
+                "month":str(month),
+                "year":str(year)
+            })
         details = {
             "rfidTag": rfid_id,
             "day": day,
             "month": month, 
             "year": year,
-            "time": time_str,  
+            "inTime": time_str,  
+            "outTime": "Present", 
             "entry": True
         }
         student_entry.insert_one(details)

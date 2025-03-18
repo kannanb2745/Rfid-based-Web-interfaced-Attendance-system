@@ -112,10 +112,12 @@ document.addEventListener('DOMContentLoaded', function() {
     monthSelect.addEventListener('change', populateDays);
     yearSelect.addEventListener('change', populateDays);
     generateBtn.addEventListener('click', generateAttendanceTable);
-
     logoutBtn.addEventListener('click', function() {
         // For now, just reload the page since we don't have authentication
-        window.location.reload();
+        // window.location.reload();
+        //TODO: Here make the url to point to the sign-in page path
+        window.location.href = 'http://127.0.0.1:5000/';
+
     });
 
     // Initialize years and trigger month change to populate days
