@@ -233,7 +233,7 @@ def receive_rfid():
         {"$set": {"entryStatus": False}}
         )
         
-    else:
+    elif(check):
         student_data = client["Students"][f"Attendance.{rfid_id}"]
         check = student_data["MetaData"].find_one({'month':str(month), 'year':str(year)})
         if check != True:
@@ -255,6 +255,13 @@ def receive_rfid():
         MetaDataEntries.update_one(
         {"rfidTag": rfid_id, "entryStatus": False},
         {"$set": {"entryStatus": True}})
+    
+    else:
+        unrfid = admin_db["NullRFIDs"]
+        unrfid.insert_one({
+            "rfid": rfid_id,
+            "ScannedTime": time_str
+        })       
 
     return jsonify({"message": "RFID received", "rfid": rfid_id})
 
